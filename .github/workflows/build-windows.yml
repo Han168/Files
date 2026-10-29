@@ -21,11 +21,11 @@ jobs:
       - name: 恢复 NuGet 包
         run: dotnet restore Files.slnx
 
-      - name: 编译解决方案 (Release x64)
-        run: dotnet build Files.slnx --configuration Release --arch x64
+      - name: 编译解决方案
+        run: dotnet build Files.slnx --configuration Release
 
       - name: 发布 Portable 版本
-        run: dotnet publish src/Files.App/Files.App.csproj --configuration Release --arch x64 --runtime win-x64 --self-contained true -o ./publish/win-x64
+        run: dotnet publish src/Files.App/Files.App.csproj --configuration Release -r win-x64 --self-contained true -o ./publish/win-x64
 
       - name: 打包 Portable zip
         run: Compress-Archive -Path "./publish/win-x64/*" -DestinationPath "Files_Portable.zip"
