@@ -21,11 +21,14 @@ jobs:
       - name: 设置 Visual Studio 开发者环境
         uses: ilammy/msvc-dev-cmd@v1
 
-      - name: 恢复 NuGet 包
-        run: msbuild Files.slnx /t:Restore /p:Configuration=Release /p:Platform=x64
+      - name: 下载 NuGet 客户端
+        run: Invoke-WebRequest -Uri "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe" -OutFile "nuget.exe"
+
+      - name: 恢复 NuGet 包 (全部项目)
+        run: .\nuget.exe restore Files.slnx -Verbosity detailed
 
       - name: 编译解决方案 (Release x64)
-        run: msbuild Files.slnx /p:Configuration=Release /p:Platform=x64 /p:BuildProjectReferences=true
+        run: msbuild Files.slnx /p:Configuration=Release /p:Platform=x64 /p:BuildProjectReferences=true /nologo /v:normal
 
       - name: 发布 Portable 版本
         run: dotnet publish src/Files.App/Files.App.csproj --configuration Release -r win-x64 --self-contained true -o ./publish/win-x64
