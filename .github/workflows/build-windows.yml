@@ -22,36 +22,36 @@ jobs:
         with:
           dotnet-version: '10.0.102'
 
-      # 3. 恢复整个解决方案的 NuGet 包（关键修复）
-      - name: 恢复 NuGet 包 (整个解决方案)
+      # 3. 恢复整个解决方案的 NuGet 包
+      - name: 恢复 NuGet 包
         run: dotnet restore Files.slnx
 
       # 4. 使用 MSBuild 编译（支持 C# + C++ 项目）
       - name: 编译解决方案 (Release x64)
         run: |
-          msbuild Files.slnx `
-            /p:Configuration=Release `
-            /p:Platform=x64 `
-            /p:BuildProjectReferences=true `
-            /nologo `
+          msbuild Files.slnx ^
+            /p:Configuration=Release ^
+            /p:Platform=x64 ^
+            /p:BuildProjectReferences=true ^
+            /nologo ^
             /v:normal
 
-      # 5. 发布主应用为 Portable 版本
+      # 5. 发布为 Portable 版本
       - name: 发布 Portable 版本
         run: |
-          dotnet publish src/Files.App/Files.App.csproj `
-            -c Release `
-            -p:Platform=x64 `
-            -r win-x64 `
-            --self-contained true `
-            -p:PublishSingleFile=false `
+          dotnet publish src/Files.App/Files.App.csproj ^
+            -c Release ^
+            -p:Platform=x64 ^
+            -r win-x64 ^
+            --self-contained true ^
+            -p:PublishSingleFile=false ^
             -o ./publish/win-x64
 
-      # 6. 将输出目录压缩为 zip，方便下载
+      # 6. 压缩输出目录为 zip
       - name: 打包 Portable zip
         run: Compress-Archive -Path "./publish/win-x64/*" -DestinationPath "Files_Portable.zip"
 
-      # 7. 上传构建产物（Artifacts，可在 Actions 页面下载）
+      # 7. 上传构建产物
       - name: 上传构建产物
         uses: actions/upload-artifact@v4
         with:
@@ -59,11 +59,3 @@ jobs:
           path: |
             Files_Portable.zip
           retention-days: 7
-
-      # 8. 可选：创建 GitHub Release 并附上安装包（仅在打标签时触发）
-      - name: 创建 Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            Files_Portable.zip
