@@ -1,6 +1,5 @@
 name: Build Files for Windows
 
-# 触发条件：推送代码到 main 分支，或在 GitHub 网页手动触发
 on:
   push:
     branches: [main]
@@ -8,7 +7,6 @@ on:
 
 jobs:
   build:
-    # 使用 GitHub 官方 Windows 虚拟机（预装 Visual Studio 2022 + Windows SDK）
     runs-on: windows-latest
 
     steps:
@@ -16,26 +14,28 @@ jobs:
       - name: Checkout 代码
         uses: actions/checkout@v4
 
-      # 2. 安装 .NET 10 SDK（项目要求，GitHub 镜像可能未预装）
+      # 2. 安装 .NET 10 SDK
       - name: 安装 .NET 10 SDK
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.102'
           roll-forward: latestMajor
 
-      # 3. 恢复 NuGet 依赖包
-      - name: 恢复 NuGet 包
-        run: dotnet restore src/Files.App/Files.App.csproj
+      # 3. 恢复整个解决方案的 NuGet 包（关键修复）
+      - name: 恢复 NuGet 包 (整个解决方案)
+        run: dotnet restore Files.slnx
 
-      # 4. 编译主应用（Release 模式，x64 平台）
-      - name: 编译 Files.App (Release x64)
+      # 4. 使用 MSBuild 编译（支持 C# + C++ 项目）
+      - name: 编译解决方案 (Release x64)
         run: |
-          dotnet build src/Files.App/Files.App.csproj `
-            -c Release `
-            -p:Platform=x64 `
-            --nologo
+          msbuild Files.slnx `
+            /p:Configuration=Release `
+            /p:Platform=x64 `
+            /p:BuildProjectReferences=true `
+            /nologo `
+            /v:normal
 
-      # 5. 发布为自包含可执行文件（Portable 版，无需安装 .NET 运行时）
+      # 5. 发布主应用为 Portable 版本
       - name: 发布 Portable 版本
         run: |
           dotnet publish src/Files.App/Files.App.csproj `
@@ -46,11 +46,11 @@ jobs:
             -p:PublishSingleFile=false `
             -o ./publish/win-x64
 
-      # 6. 将输出目录压缩为 zip，方便下载
+      # 6. 压缩输出目录
       - name: 打包 Portable zip
         run: Compress-Archive -Path "./publish/win-x64/*" -DestinationPath "Files_Portable.zip"
 
-      # 7. 上传构建产物（Artifacts，可在 Actions 页面下载）
+      # 7. 上传构建产物
       - name: 上传构建产物
         uses: actions/upload-artifact@v4
         with:
@@ -59,7 +59,7 @@ jobs:
             Files_Portable.zip
           retention-days: 7
 
-      # 8. 可选：创建 GitHub Release 并附上安装包（仅在打标签时触发）
+      # 8. 可选：创建 Release
       - name: 创建 Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
