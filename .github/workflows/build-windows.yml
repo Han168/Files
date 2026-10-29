@@ -1,0 +1,68 @@
+name: Build Files for Windows
+
+# 触发条件：推送代码到 main 分支，或在 GitHub 网页手动触发
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    # 使用 GitHub 官方 Windows 虚拟机（预装 Visual Studio 2022 + Windows SDK）
+    runs-on: windows-latest
+
+    steps:
+      # 1. 拉取代码
+      - name: Checkout 代码
+        uses: actions/checkout@v4
+
+      # 2. 安装 .NET 10 SDK（项目要求，GitHub 镜像可能未预装）
+      - name: 安装 .NET 10 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.102'
+          roll-forward: latestMajor
+
+      # 3. 恢复 NuGet 依赖包
+      - name: 恢复 NuGet 包
+        run: dotnet restore src/Files.App/Files.App.csproj
+
+      # 4. 编译主应用（Release 模式，x64 平台）
+      - name: 编译 Files.App (Release x64)
+        run: |
+          dotnet build src/Files.App/Files.App.csproj `
+            -c Release `
+            -p:Platform=x64 `
+            --nologo
+
+      # 5. 发布为自包含可执行文件（Portable 版，无需安装 .NET 运行时）
+      - name: 发布 Portable 版本
+        run: |
+          dotnet publish src/Files.App/Files.App.csproj `
+            -c Release `
+            -p:Platform=x64 `
+            -r win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=false `
+            -o ./publish/win-x64
+
+      # 6. 将输出目录压缩为 zip，方便下载
+      - name: 打包 Portable zip
+        run: Compress-Archive -Path "./publish/win-x64/*" -DestinationPath "Files_Portable.zip"
+
+      # 7. 上传构建产物（Artifacts，可在 Actions 页面下载）
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: Files-Portable
+          path: |
+            Files_Portable.zip
+          retention-days: 7
+
+      # 8. 可选：创建 GitHub Release 并附上安装包（仅在打标签时触发）
+      - name: 创建 Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            Files_Portable.zip
