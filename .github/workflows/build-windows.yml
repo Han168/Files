@@ -24,14 +24,28 @@ jobs:
       - name: 下载 NuGet 客户端
         run: Invoke-WebRequest -Uri "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe" -OutFile "nuget.exe"
 
-      - name: 恢复 NuGet 包 (全部项目)
+      - name: 恢复 NuGet 包
         run: .\nuget.exe restore Files.slnx -Verbosity detailed
 
       - name: 编译解决方案 (Release x64)
-        run: msbuild Files.slnx /p:Configuration=Release /p:Platform=x64 /p:BuildProjectReferences=true /nologo /v:normal
+        run: |
+          msbuild Files.slnx `
+            /p:Configuration=Release `
+            /p:Platform=x64 `
+            /p:BuildProjectReferences=true `
+            /p:PublishReadyToRun=false `
+            /p:EnableWindowsTargeting=true `
+            /p:ExcludeRestorePackageImports=true `
+            /nologo /v:minimal
 
-      - name: 发布 Portable 版本
-        run: dotnet publish src/Files.App/Files.App.csproj --configuration Release -r win-x64 --self-contained true -o ./publish/win-x64
+      - name: 发布主应用 (Portable)
+        run: dotnet publish src/Files.App/Files.App.csproj `
+          --configuration Release `
+          -r win-x64 `
+          --self-contained true `
+          /p:PublishReadyToRun=false `
+          /p:IncludeNativeLibrariesForSelfExtract=true `
+          -o ./publish/win-x64
 
       - name: 打包 Portable zip
         run: Compress-Archive -Path "./publish/win-x64/*" -DestinationPath "Files_Portable.zip"
