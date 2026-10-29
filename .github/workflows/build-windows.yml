@@ -1,5 +1,6 @@
 name: Build Files for Windows
 
+# 触发条件：推送代码到 main 分支，或在 GitHub 网页手动触发
 on:
   push:
     branches: [main]
@@ -7,6 +8,7 @@ on:
 
 jobs:
   build:
+    # 使用 GitHub 官方 Windows 虚拟机（预装 Visual Studio 2022 + Windows SDK）
     runs-on: windows-latest
 
     steps:
@@ -19,7 +21,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.102'
-          roll-forward: latestMajor
 
       # 3. 恢复整个解决方案的 NuGet 包（关键修复）
       - name: 恢复 NuGet 包 (整个解决方案)
@@ -46,11 +47,11 @@ jobs:
             -p:PublishSingleFile=false `
             -o ./publish/win-x64
 
-      # 6. 压缩输出目录
+      # 6. 将输出目录压缩为 zip，方便下载
       - name: 打包 Portable zip
         run: Compress-Archive -Path "./publish/win-x64/*" -DestinationPath "Files_Portable.zip"
 
-      # 7. 上传构建产物
+      # 7. 上传构建产物（Artifacts，可在 Actions 页面下载）
       - name: 上传构建产物
         uses: actions/upload-artifact@v4
         with:
@@ -59,7 +60,7 @@ jobs:
             Files_Portable.zip
           retention-days: 7
 
-      # 8. 可选：创建 Release
+      # 8. 可选：创建 GitHub Release 并附上安装包（仅在打标签时触发）
       - name: 创建 Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v1
