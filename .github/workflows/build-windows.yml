@@ -34,11 +34,10 @@ jobs:
             /p:Platform=x64 `
             /p:BuildProjectReferences=true `
             /p:PublishReadyToRun=false `
-            /p:EnableWindowsTargeting=true `
-            /p:ExcludeRestorePackageImports=true `
-            /nologo /v:minimal
+            /p:DisableFastUpToDateCheck=true `
+            /nologo /v:normal
 
-      - name: 发布主应用 (Portable)
+      - name: 发布主应用 (Portable, 跳过测试项目)
         run: dotnet publish src/Files.App/Files.App.csproj `
           --configuration Release `
           -r win-x64 `
